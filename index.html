@@ -21,7 +21,7 @@
             max-width: 500px;
             text-align: left;
         }
-        input, button {
+        input, textarea, button {
             width: 100%;
             padding: 10px;
             margin-bottom: 15px;
@@ -52,7 +52,7 @@
 </head>
 <body>
     <h1>DC Matching avec Cloudinary</h1>
-    <p>Upload un CV, et nous l'analyserons pour voir s'il correspond à l'offre d'emploi.</p>
+    <p>Upload plusieurs CVs, et nous les analyserons pour voir s'ils correspondent à l'offre d'emploi.</p>
 
     <!-- Formulaire pour l'upload -->
     <form id="uploadForm">
@@ -60,56 +60,79 @@
         <input type="text" id="jobTitle" placeholder="Titre de l'offre" required>
         <textarea id="jobDescription" placeholder="Description de l'offre" rows="5" required></textarea>
 
-        <h2>2. Upload ton CV</h2>
-        <input type="file" id="fileUpload" accept=".pdf,.doc,.docx,.txt" required>
-        <button type="button" id="uploadButton">Upload</button>
+        <h2>2. Upload tes CVs</h2>
+        <input type="file" id="fileUpload" accept=".pdf,.doc,.docx,.txt" multiple required>
+        <button type="button" id="uploadButton">Uploader et Analyser</button>
     </form>
 
     <!-- Résultat -->
     <div id="uploadResult">
-        <h2>Résultat :</h2>
-        <p id="uploadedFileInfo">Aucun fichier uploadé pour l'instant.</p>
+        <h2>Résultats :</h2>
+        <div id="resultsContainer"></div>
     </div>
 
     <script>
         // Configuration Cloudinary
-        const CLOUD_NAME = "YOUR_CLOUD_NAME"; // Remplace par ton "Cloud name"
-        const UPLOAD_PRESET = "YOUR_UPLOAD_PRESET"; // Remplace par ton "Upload preset"
+        const CLOUD_NAME = "dzrgdobju"; // Ton Cloudinary Cloud Name
+        const UPLOAD_PRESET = "ml_default"; // Ton preset Cloudinary
 
-        document.getElementById("uploadButton").addEventListener("click", () => {
+        // Clé API OpenAI
+        const OPENAI_API_KEY = "975217478322373";
+
+        document.getElementById("uploadButton").addEventListener("click", async () => {
             const fileInput = document.getElementById("fileUpload");
-            const file = fileInput.files[0];
+            const files = fileInput.files; // Plusieurs fichiers
             const jobTitle = document.getElementById("jobTitle").value;
             const jobDescription = document.getElementById("jobDescription").value;
 
-            if (!file) {
-                alert("Veuillez sélectionner un fichier.");
+            if (files.length === 0) {
+                alert("Veuillez sélectionner au moins un fichier.");
                 return;
             }
 
-            const formData = new FormData();
-            formData.append("file", file);
-            formData.append("upload_preset", UPLOAD_PRESET);
+            const resultsContainer = document.getElementById("resultsContainer");
+            resultsContainer.innerHTML = ""; // Vider les résultats précédents
 
-            // Upload vers Cloudinary
-            fetch(`https://api.cloudinary.com/v1_1/${CLOUD_NAME}/auto/upload`, {
-                method: "POST",
-                body: formData,
-            })
-                .then((response) => response.json())
-                .then((data) => {
-                    document.getElementById("uploadedFileInfo").innerText = `
-                        Fichier uploadé avec succès : ${data.secure_url}
+            for (const file of files) {
+                const formData = new FormData();
+                formData.append("file", file);
+                formData.append("upload_preset", UPLOAD_PRESET);
+
+                // Affichage d'un message temporaire pendant l'upload
+                const tempMessage = document.createElement("p");
+                tempMessage.innerText = `Upload en cours pour : ${file.name}`;
+                resultsContainer.appendChild(tempMessage);
+
+                try {
+                    // Upload vers Cloudinary
+                    const uploadResponse = await fetch(`https://api.cloudinary.com/v1_1/${CLOUD_NAME}/auto/upload`, {
+                        method: "POST",
+                        body: formData,
+                    });
+                    const uploadData = await uploadResponse.json();
+
+                    // Supprimer le message temporaire
+                    tempMessage.remove();
+
+                    // Analyser le fichier uploadé avec ChatGPT
+                    const analysisResult = await analyzeFile(uploadData.secure_url, jobTitle, jobDescription);
+
+                    // Ajouter les résultats au conteneur
+                    const resultElement = document.createElement("div");
+                    resultElement.innerHTML = `
+                        <h3>Fichier : ${file.name}</h3>
+                        <p><strong>URL :</strong> <a href="${uploadData.secure_url}" target="_blank">${uploadData.secure_url}</a></p>
+                        <p><strong>Résultat de l'analyse :</strong> ${analysisResult}</p>
                     `;
-                    analyzeFile(data.secure_url, jobTitle, jobDescription);
-                })
-                .catch((error) => {
-                    console.error("Erreur lors de l'upload :", error);
-                    alert("Une erreur est survenue lors de l'upload.");
-                });
+                    resultsContainer.appendChild(resultElement);
+                } catch (error) {
+                    console.error(`Erreur pour le fichier ${file.name} :`, error);
+                    tempMessage.innerText = `Erreur lors de l'upload ou de l'analyse pour : ${file.name}`;
+                }
+            }
         });
 
-        // Appel à ChatGPT pour analyser le fichier
+        // Appel à ChatGPT pour analyser un fichier
         async function analyzeFile(fileURL, jobTitle, jobDescription) {
             const prompt = `
                 Voici un fichier CV : ${fileURL}
@@ -123,7 +146,7 @@
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
-                    Authorization: 'Bearer YOUR_OPENAI_API_KEY', // Remplace par ta clé OpenAI
+                    Authorization: `Bearer ${OPENAI_API_KEY}`, // Utilisation de la clé OpenAI
                 },
                 body: JSON.stringify({
                     model: 'text-davinci-003',
@@ -133,10 +156,7 @@
             });
 
             const result = await response.json();
-            document.getElementById("uploadResult").innerHTML += `
-                <h3>Analyse ChatGPT</h3>
-                <p>${result.choices[0].text}</p>
-            `;
+            return result.choices[0].text.trim();
         }
     </script>
 </body>

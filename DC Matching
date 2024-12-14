@@ -1,0 +1,44 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>DC Matching</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            text-align: center;
+            margin: 0;
+            padding: 20px;
+            background-color: #f9f9f9;
+        }
+        textarea, input, button {
+            margin: 10px;
+            padding: 10px;
+            width: 80%;
+            max-width: 500px;
+        }
+        #results {
+            margin-top: 20px;
+            text-align: left;
+            max-width: 600px;
+            margin-left: auto;
+            margin-right: auto;
+        }
+    </style>
+</head>
+<body>
+    <h1>Analyse des Dossiers de Compétences</h1>
+    <form id="dcForm">
+        <input type="text" id="jobTitle" placeholder="Titre de l'offre" required>
+        <textarea id="jobDescription" placeholder="Description de l'offre" required></textarea>
+        <textarea id="dcContent" placeholder="Dossier de Compétences (texte brut)" required></textarea>
+        <button type="submit">Analyser</button>
+    </form>
+    <div id="results">
+        <h2>Résultats :</h2>
+        <p>Les résultats apparaîtront ici après l'analyse.</p>
+    </div>
+    <script src="script.js"></script>
+</body>
+</html>

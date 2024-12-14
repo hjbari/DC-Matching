@@ -52,7 +52,7 @@
 </head>
 <body>
     <h1>DC Matching avec Cloudinary</h1>
-    <p>Upload plusieurs CVs, et nous les analyserons pour voir s'ils correspondent à l'offre d'emploi.</p>
+    <p>Upload jusqu'à 10 CVs, et nous les analyserons pour voir s'ils correspondent à l'offre d'emploi.</p>
 
     <!-- Formulaire pour l'upload -->
     <form id="uploadForm">
@@ -67,7 +67,7 @@
 
     <!-- Résultat -->
     <div id="uploadResult">
-        <h2>Résultats :</h2>
+        <h2>Résultat :</h2>
         <div id="resultsContainer"></div>
     </div>
 
@@ -87,6 +87,11 @@
 
             if (files.length === 0) {
                 alert("Veuillez sélectionner au moins un fichier.");
+                return;
+            }
+
+            if (files.length > 10) {
+                alert("Vous ne pouvez uploader que jusqu'à 10 fichiers à la fois.");
                 return;
             }
 
@@ -110,6 +115,10 @@
                         body: formData,
                     });
                     const uploadData = await uploadResponse.json();
+
+                    if (!uploadData.secure_url) {
+                        throw new Error("Erreur d'upload. URL non récupérée.");
+                    }
 
                     // Supprimer le message temporaire
                     tempMessage.remove();
@@ -156,7 +165,11 @@
             });
 
             const result = await response.json();
-            return result.choices[0].text.trim();
+            if (result.choices && result.choices[0]) {
+                return result.choices[0].text.trim();
+            } else {
+                throw new Error("Erreur lors de l'analyse par ChatGPT.");
+            }
         }
     </script>
 </body>
